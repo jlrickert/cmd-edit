@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var completionShell string
+
 var rootCmd = &cobra.Command{
 	Use:   "ed [args...]",
 	Short: "Editor wrapper (ported from bash) with shell completion support",
@@ -30,6 +32,59 @@ completion support can be used.`,
 func init() {
 	// Initialize the default "completion" command provided by cobra.
 	rootCmd.InitDefaultCompletionCmd()
+
+	// Add a --completion <SHELL> persistent flag that writes completions to stdout and exits.
+	rootCmd.PersistentFlags().StringVar(&completionShell, "completion", "", "generate shell completion for [bash|zsh|fish|powershell] (prints to stdout and exits)")
+
+	// Register shell completions for the --completion flag.
+	// Suggest common shells and avoid file completions.
+	rootCmd.RegisterFlagCompletionFunc("completion", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		options := []string{"bash", "zsh", "fish", "powershell", "pwsh"}
+		var matches []string
+		for _, o := range options {
+			if strings.HasPrefix(o, toComplete) {
+				matches = append(matches, o)
+			}
+		}
+		// Do not trigger file completion
+		return matches, cobra.ShellCompDirectiveNoFileComp
+	})
+
+	// If --completion is provided, generate the requested completion and exit before running the command.
+	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		if completionShell == "" {
+			return nil
+		}
+		switch completionShell {
+		case "bash":
+			if err := rootCmd.GenBashCompletion(os.Stdout); err != nil {
+				fmt.Fprintln(os.Stderr, "error generating bash completion:", err)
+				os.Exit(1)
+			}
+		case "zsh":
+			if err := rootCmd.GenZshCompletion(os.Stdout); err != nil {
+				fmt.Fprintln(os.Stderr, "error generating zsh completion:", err)
+				os.Exit(1)
+			}
+		case "fish":
+			// include descriptions for fish completions
+			if err := rootCmd.GenFishCompletion(os.Stdout, true); err != nil {
+				fmt.Fprintln(os.Stderr, "error generating fish completion:", err)
+				os.Exit(1)
+			}
+		case "powershell", "pwsh":
+			if err := rootCmd.GenPowerShellCompletion(os.Stdout); err != nil {
+				fmt.Fprintln(os.Stderr, "error generating powershell completion:", err)
+				os.Exit(1)
+			}
+		default:
+			fmt.Fprintln(os.Stderr, "unsupported shell for --completion:", completionShell)
+			os.Exit(1)
+		}
+		// Successfully wrote completions; exit now.
+		os.Exit(0)
+		return nil
+	}
 }
 
 func main() {
