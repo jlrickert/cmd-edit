@@ -1,0 +1,11 @@
+# https://taskfile.dev
+
+version: "3"
+tasks:
+  install:
+    desc: Install the ed CLI (go install ./cmd/ed) and generate Zsh completions (~/.cache/dotfiles/zsh/completions/_ed).
+    cmds:
+      - go install ./cmd/ed
+      - ed completion zsh > '{{env "HOME"}}/.cache/dotfiles/zsh/completions/_ed'
+    sources:
+      - cmd/ed/*.go
