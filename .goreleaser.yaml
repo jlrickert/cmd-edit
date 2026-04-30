@@ -1,0 +1,55 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: ed
+    binary: ed
+    main: ./cmd/edit
+    env: [CGO_ENABLED=0, GOWORK=off]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: ["-s -w -X main.Version={{.Version}}"]
+
+archives:
+  - id: ed
+    ids: [ed]
+    name_template: "ed_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files: [LICENSE, README.md, CHANGELOG.md]
+
+brews:
+  - ids: [ed]
+    name: cmd-edit
+    repository:
+      owner: jlrickert
+      name: homebrew-formulae
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/jlrickert/cmd-edit"
+    description: "Editor wrapper that exports project context to the child editor and ships shell completions"
+    license: "Apache-2.0"
+    install: |
+      bin.install "ed"
+      generate_completions_from_executable(bin/"ed", "completion")
+    test: |
+      system "#{bin}/ed", "--version"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^chore: release v"
+      - "^Merge"
+
+release:
+  footer: |
+    ---
+    Released with [GoReleaser](https://goreleaser.com).

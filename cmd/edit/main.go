@@ -13,6 +13,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Version is overridden at build time via -ldflags by goreleaser.
+var Version = "dev"
+
 var completionShell string
 
 var rootCmd = &cobra.Command{
@@ -30,6 +33,11 @@ completion support can be used.`,
 }
 
 func init() {
+	// Wiring rootCmd.Version BEFORE InitDefaultCompletionCmd so cobra picks up
+	// the version string when generating the completion subcommand and the
+	// auto-injected --version flag.
+	rootCmd.Version = Version
+
 	// Initialize the default "completion" command provided by cobra.
 	rootCmd.InitDefaultCompletionCmd()
 
